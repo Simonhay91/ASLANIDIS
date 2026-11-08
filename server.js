@@ -62,7 +62,8 @@ function validate(d) {
   const s = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
   const out = {
     name: s(d.name, 80), phone: s(d.phone, 30), tour: s(d.tour, 80),
-    date: s(d.date, 40), comment: s(d.comment, 600), people: Number(d.people)
+    date: s(d.date, 40), comment: s(d.comment, 600), people: Number(d.people),
+    lang: ['hy', 'en', 'el'].includes(d.lang) ? d.lang : 'hy'
   };
   if (out.name.length < 2) return null;
   if (!/^[+\d][\d\s()\-]{6,24}$/.test(out.phone)) return null;
@@ -99,6 +100,7 @@ const server = http.createServer(async (req, res) => {
         `<b>Տուր՝</b> ${esc(d.tour || '—')}\n` +
         `<b>Ուղևորներ՝</b> ${d.people}\n` +
         `<b>Ամսաթիվ՝</b> ${esc(d.date || '—')}\n` +
+        `<b>Էջի լեզուն՝</b> ${{ hy: 'Հայերեն', en: 'English', el: 'Ελληνικά' }[d.lang]}\n` +
         (d.comment ? `<b>Մեկնաբանություն՝</b> ${esc(d.comment)}\n` : '');
 
       try {
