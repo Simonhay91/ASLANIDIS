@@ -1,0 +1,7 @@
+# Apache/LiteSpeed. /api/request -> request.php (որպեսզի index.html-ը նույնը մնա Node-ի և PHP-ի համար)
+RewriteEngine On
+RewriteRule ^api/request$ request.php [L]
+# Գաղտնի ֆայլերը չբացվեն բրաուզերով
+<FilesMatch "^(config\.php|lib\.php|\.env|server\.js)$">
+  Require all denied
+</FilesMatch>
