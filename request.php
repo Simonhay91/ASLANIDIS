@@ -1,10 +1,15 @@
 <?php
-// Հայտի ընդունում -> Telegram (փոխարինում է server.js-ի POST /api/request-ին)
-require __DIR__ . '/lib.php';
+// Հայտի ընդունում -> էլ. փոստ (փոխարինում է server.js-ի POST /api/request-ին)
+const TO_EMAIL = 'Aslanidistour@gmail.com';
+
+function out(int $code, array $obj): void {
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($obj);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') out(405, ['ok' => false]);
-$c = cfg();
-if (empty($c['BOT_TOKEN']) || empty($c['CHAT_ID'])) out(500, ['ok' => false]);
 
 // Սահմանափակում՝ IP-ի համար 5 հայտ 10 րոպեում
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'x';
@@ -36,26 +41,25 @@ $people = (int)$people;
 
 $id = strtoupper(base_convert((string)(int)(microtime(true) * 1000), 10, 36));
 $langName = ['hy' => 'Հայերեն', 'en' => 'English', 'el' => 'Ελληνικά'][$lang];
-$text = "🚌 <b>Նոր հայտ #$id</b>\n\n"
-    . "<b>Անուն՝</b> " . esc($name) . "\n"
-    . "<b>Հեռախոս՝</b> " . esc($phone) . "\n"
-    . "<b>Տուր՝</b> " . esc($tour ?: '—') . "\n"
-    . "<b>Ուղևորներ՝</b> $people\n"
-    . "<b>Ամսաթիվ՝</b> " . esc($date ?: '—') . "\n"
-    . "<b>Էջի լեզուն՝</b> $langName\n"
-    . ($comment !== '' ? "<b>Մեկնաբանություն՝</b> " . esc($comment) . "\n" : '');
+// Վերնագրում օգտվողի տվյալ չկա (header injection-ից խուսափելու համար)
+$subject = '=?UTF-8?B?' . base64_encode("Նոր հայտ #$id · Aslanidis Tours") . '?=';
+$body = "Նոր հայտ #$id\n\n"
+    . "Անուն՝ $name\n"
+    . "Հեռախոս՝ $phone\n"
+    . "Տուր՝ " . ($tour ?: '—') . "\n"
+    . "Ուղևորներ՝ $people\n"
+    . "Ամսաթիվ՝ " . ($date ?: '—') . "\n"
+    . "Էջի լեզուն՝ $langName\n"
+    . ($comment !== '' ? "Մեկնաբանություն՝ $comment\n" : '');
 
-try {
-    tg('sendMessage', [
-        'chat_id' => $c['CHAT_ID'],
-        'text' => $text,
-        'parse_mode' => 'HTML',
-        'reply_markup' => ['inline_keyboard' => [[
-            ['text' => '✅ Ընդունել', 'callback_data' => "ok:$id"],
-            ['text' => '❌ Մերժել', 'callback_data' => "no:$id"],
-        ]]],
-    ]);
-} catch (Throwable $e) {
+$host = preg_replace('/^www\./', '', preg_replace('/[^a-z0-9.\-]/i', '', $_SERVER['HTTP_HOST'] ?? 'localhost'));
+$headers = "From: Aslanidis Tours <no-reply@$host>\r\n"
+    . "MIME-Version: 1.0\r\n"
+    . "Content-Type: text/plain; charset=UTF-8\r\n"
+    . "Content-Transfer-Encoding: 8bit\r\n";
+
+if (!@mail(TO_EMAIL, $subject, $body, $headers)) {
+    error_log('mail() failed for request ' . $id);
     out(502, ['ok' => false]);
 }
 out(200, ['ok' => true]);
